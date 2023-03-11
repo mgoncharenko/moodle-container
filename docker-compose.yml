@@ -1,0 +1,48 @@
+version: "3.8"
+
+services:
+  mysql:
+    image: mysql:5.7.41
+    command: --max_allowed_packet=67108864
+    healthcheck:
+      test: "/usr/bin/mysql --user=root --password=root --execute \"SHOW DATABASES;\""
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: moodle
+      MYSQL_USER: moodle
+      MYSQL_PASSWORD: moodle
+    ports:
+      - 3306:3306
+
+  mailserver:
+    image: greenmail/standalone:1.6.0-SNAPSHOT
+    environment:
+      # Enable GreenMail verbose mode
+      - GREENMAIL_OPTS=-Dgreenmail.setup.test.all -Dgreenmail.hostname=0.0.0.0 -Dgreenmail.auth.disabled -Dgreenmail.verbose -Dgreenmail.startup.timeout=30000
+    ports:
+      - "3025:3025"
+      - "3143:3143"
+
+  roundcube:
+    platform: linux/amd64
+    build:
+      context: ./roundcube
+    ports:
+      - "8025:80"
+    links:
+      - mailserver
+
+  moodle:
+    build:
+      context: ./moodle
+    volumes:
+      - ./moodle/config:/mnt/config
+      - ./moodle/data:/var/www/moodledata
+#    depends_on:
+#      mysql:
+#        condition: service_healthy
+    ports:
+      - 8100:80
